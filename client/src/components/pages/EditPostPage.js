@@ -40,7 +40,7 @@ export const EditPostPage = () => {
   const [redirect, setRedirect] = useState(false);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/post/${id}`).then((response) => {
+    fetch(`https://blog-app-mern-0a1m.onrender.com/post/${id}`).then((response) => {
       response.json().then((postInfo) => {
         setTitle(postInfo.title);
         setContent(postInfo.content);
@@ -62,7 +62,7 @@ export const EditPostPage = () => {
     }
 
     e.preventDefault();
-    await fetch(`http://localhost:5000/post`, {
+    await fetch(`https://blog-app-mern-0a1m.onrender.com/post`, {
       method: "PUT",
       body: data,
       credentials: "include",

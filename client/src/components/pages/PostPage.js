@@ -8,7 +8,7 @@ export const PostPage = () => {
   const { userInfo } = useContext(UserContext);
   const { id } = useParams();
   useEffect(() => {
-    fetch(`http://localhost:5000/post/${id}`).then((response) => {
+    fetch(`https://blog-app-mern-0a1m.onrender.com/post/${id}`).then((response) => {
       response.json().then((posts) => {
         setPosts(posts);
       });
@@ -30,7 +30,7 @@ export const PostPage = () => {
         </div>
       )}
       <div className="image">
-        <img src={`http://localhost:5000/${posts.cover}`} alt="" />
+        <img src={`https://blog-app-mern-0a1m.onrender.com/${posts.cover}`} alt="" />
       </div>
       <div
         className="content"
