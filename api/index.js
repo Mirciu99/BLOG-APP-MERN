@@ -23,7 +23,15 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "build/index.html"));
 });
 
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(
+  cors({
+    origin: [
+      "https://blog-app-mern-0a1m.onrender.com",
+      "http://localhost:3000",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.use(cookieParser());
@@ -78,26 +86,31 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/post", uploadMiddleware.single("file"), async (req, res) => {
-  const { originalname, path } = req.file;
-  const parts = originalname.split(".");
-  const ext = parts[parts.length - 1];
-  const newPath = path + "." + ext;
-  fs.renameSync(path, newPath);
+  try {
+    const { originalname, path } = req.file;
+    const parts = originalname.split(".");
+    const ext = parts[parts.length - 1];
+    const newPath = path + "." + ext;
+    fs.renameSync(path, newPath);
 
-  const { token } = req.cookies;
-
-  jwt.verify(token, secret, {}, async (err, info) => {
-    if (err) throw err;
-    const { title, summary, content } = req.body;
-    const postDoc = await Post.create({
-      title,
-      summary,
-      content,
-      cover: newPath,
-      author: info.id,
+    const { token } = req.cookies;
+    jwt.verify(token, secret, {}, async (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ message: "Invalid token", error: err });
+      }
+      const { title, summary, content } = req.body;
+      const postDoc = await Post.create({
+        title,
+        summary,
+        content,
+        cover: newPath,
+        author: decoded.id,
+      });
+      res.json(postDoc);
     });
-    res.json(postDoc);
-  });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 app.get("/post", async (req, res) => {
@@ -110,41 +123,56 @@ app.get("/post", async (req, res) => {
 });
 
 app.put("/post", uploadMiddleware.single("file"), async (req, res) => {
-  let newPath = null;
-  if (req.file) {
-    const { originalname, path } = req.file;
-    const parts = originalname.split(".");
-    const ext = parts[parts.length - 1];
-    const newPath = path + "." + ext;
-    fs.renameSync(path, newPath);
-  }
-
-  const { token } = req.cookies;
-
-  jwt.verify(token, secret, {}, async (err, info) => {
-    if (err) throw err;
-    const { id, title, summary, content } = req.body;
-    const postDoc = await Post.findById(req.body.id);
-    const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
-    if (!isAuthor) {
-      return res.status(400).json("You are not the author");
+  try {
+    let newPath = null;
+    if (req.file) {
+      const { originalname, path } = req.file;
+      const parts = originalname.split(".");
+      const ext = parts[parts.length - 1];
+      newPath = path + "." + ext;
+      fs.renameSync(path, newPath);
     }
 
-    await postDoc.updateOne({
-      title,
-      summary,
-      content,
-      cover: newPath ? newPath : postDoc.cover,
-    });
+    const { token } = req.cookies;
+    jwt.verify(token, secret, {}, async (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ message: "Invalid token", error: err });
+      }
+      const { id, title, summary, content } = req.body;
+      const postDoc = await Post.findById(id);
+      if (!postDoc) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      const isAuthor = postDoc.author.toString() === decoded.id;
+      if (!isAuthor) {
+        return res.status(403).json({ message: "You are not the author" });
+      }
 
-    res.json(postDoc);
-  });
+      await postDoc.updateOne({
+        title,
+        summary,
+        content,
+        cover: newPath ? newPath : postDoc.cover,
+      });
+
+      res.json(postDoc);
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 app.get("/post/:id", async (req, res) => {
-  const { id } = req.params;
-  const post = await Post.findById(id).populate("author", ["username"]);
-  res.json(post);
+  try {
+    const { id } = req.params;
+    const post = await Post.findById(id).populate("author", ["username"]);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    res.json(post);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 app.listen(5000);
