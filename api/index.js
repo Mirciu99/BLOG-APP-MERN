@@ -15,6 +15,8 @@ const path = require("path");
 const salt = bcrypt.genSaltSync(10);
 const secret = "nfsdinfdskjfnsdknfdksnjfsd";
 
+console.log(path.join(__dirname, "build"));
+
 app.use(express.static(path.join(__dirname, "build")));
 
 app.get("/", (req, res) => {
